@@ -2,7 +2,9 @@
 
 A personal (sideloaded) Android app that sets **Developer options → Apps → Background process limit** to **"At most 4 processes"** at every boot.
 
-Android keeps this value only in `ActivityManagerService` memory and forgets it on reboot. ProcLimit sets it again from a `BOOT_COMPLETED` receiver by calling the hidden `IActivityManager.setProcessLimit(4)` through plain reflection on `ActivityManager.getService()`. The call is authorized by `android.permission.SET_PROCESS_LIMIT` (protection level `signature|privileged|development`), which the manifest declares and you grant once with `adb shell pm grant`.
+Android keeps this value only in `ActivityManagerService` memory and forgets it on reboot. ProcLimit sets it again at boot by calling the hidden `IActivityManager.setProcessLimit(4)` through plain reflection on `ActivityManager.getService()`. The call is authorized by `android.permission.SET_PROCESS_LIMIT` (protection level `signature|privileged|development`), which the manifest declares and you grant once with `adb shell pm grant`.
+
+The receiver is direct-boot aware and acts on `LOCKED_BOOT_COMPLETED`, which arrives right after boot, before you unlock. `BOOT_COMPLETED` alone isn't enough: Android delivers it to every listening app in turn, and on a real phone (358 receivers on a Pixel 8) it reached ProcLimit more than 3 minutes after boot. `BOOT_COMPLETED` is still handled as a backup and re-applies the limit.
 
 - Package: `io.github.omega28.proclimit`
 - Limit values: `-1` Standard, `0` no background processes, `1`–`4` at most N
@@ -12,7 +14,8 @@ Android keeps this value only in `ActivityManagerService` memory and forgets it 
 
 After each boot (once you've unlocked the phone), ProcLimit:
 
-- shows a toast: *ProcLimit: At most 4 processes*
+- posts the notification below as soon as the limit is applied (before unlock), so it's waiting when you unlock
+- shows a toast, *ProcLimit: At most 4 processes*, when `BOOT_COMPLETED` arrives after unlock; on a busy phone that can be a few minutes later
 - posts a silent notification that stays in the shade until you dismiss it: *At most 4 background processes · Limit applied at boot · <time>*
 - if the apply failed, posts an alerting notification with the error instead
 
@@ -56,7 +59,7 @@ Run these from the Mac. From Termux, drop the `adb shell` prefix from the `pm`/`
    ```bash
    adb install -r app/build/outputs/apk/debug/app-debug.apk
    ```
-2. **Launch once.** Open ProcLimit from the launcher. This takes the app out of the "stopped" state; without it, Android won't deliver `BOOT_COMPLETED`. The screen should show *Permission not granted* with the grant command. Tap **Allow notifications** and allow.
+2. **Launch once.** Open ProcLimit from the launcher. This takes the app out of the "stopped" state; without it, Android won't deliver the boot broadcasts. The screen should show *Permission not granted* with the grant command. Tap **Allow notifications** and allow.
 3. **Grant**
    ```bash
    adb shell pm grant io.github.omega28.proclimit android.permission.SET_PROCESS_LIMIT
@@ -82,7 +85,7 @@ Run these from the Mac. From Termux, drop the `adb shell` prefix from the `pm`/`
    ```bash
    adb logcat -d -s ProcLimit
    ```
-   Pass: `boot: OK: Set to at most 4 processes`. You should also have seen the toast after unlocking, the notification shade should show *At most 4 background processes*, and the app's *Last boot* card shows the same result with the boot time.
+   Pass: `android.intent.action.LOCKED_BOOT_COMPLETED: OK: Set to at most 4 processes` within seconds of boot, later followed by the same line for `BOOT_COMPLETED`. You should also have seen the toast after unlocking, the notification shade should show *At most 4 background processes*, and the app's *Last boot* card shows the same result with the boot time.
 9. **Confirm in Developer options** (assumption 3): Settings → System → Developer options → Background process limit shows **"At most 4 processes"**. Check again a few minutes later to make sure nothing reset it.
 
 The protocol passes when steps 4, 5, 7, 8 and 9 all pass.
@@ -91,7 +94,7 @@ The protocol passes when steps 4, 5, 7, 8 and 9 all pass.
 
 - **Grant lost after reboot (step 7) or call rejected (step 5):** fall back to Shizuku. Call the same `setProcessLimit(4)` through Shizuku's binder at boot (`com.android.shell` already holds `SET_PROCESS_LIMIT`).
 - **Call blocked by hidden-API restrictions (step 5):** the result line will name the hidden method. A workaround (for example a reflection-based exemption) can be added; it was left out on purpose until it's shown to be needed.
-- **Boot result OK but Developer options shows Standard later (step 9):** something reset the limit after `BOOT_COMPLETED`; the app would need to re-apply later (for example via a delayed job).
+- **Boot result OK but Developer options shows Standard later (step 9):** something reset the limit after boot; the app would need to re-apply later (for example via a delayed job).
 
 ## Reset
 

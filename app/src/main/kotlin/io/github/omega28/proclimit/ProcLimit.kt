@@ -2,6 +2,7 @@ package io.github.omega28.proclimit
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.SystemClock
 import android.text.format.DateFormat
 import java.lang.reflect.InvocationTargetException
 import java.util.Date
@@ -74,7 +75,12 @@ object ProcLimit {
         return "${DateFormat.getMediumDateFormat(context).format(date)}, ${DateFormat.getTimeFormat(context).format(date)}"
     }
 
-    private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    /** Wall-clock time of the current boot. */
+    fun bootTime(): Long = System.currentTimeMillis() - SystemClock.elapsedRealtime()
+
+    // Device-protected storage: readable at LOCKED_BOOT_COMPLETED, before the user unlocks.
+    private fun prefs(context: Context) =
+        context.createDeviceProtectedStorageContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     /** Reflective call on ActivityManager.getService(); unwraps InvocationTargetException to report the real cause. */
     private fun invoke(name: String, vararg args: Int): Any? {

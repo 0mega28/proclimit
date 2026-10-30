@@ -11,8 +11,8 @@ android {
         applicationId = "io.github.omega28.proclimit"
         minSdk = 33
         targetSdk = 37
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
     }
 
     // Release signing comes from the environment (CI secrets); without it, release builds are unsigned.

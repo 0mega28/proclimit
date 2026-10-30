@@ -8,6 +8,16 @@ Android keeps this value only in `ActivityManagerService` memory and forgets it 
 - Limit values: `-1` Standard, `0` no background processes, `1`–`4` at most N
 - No hidden-API workaround is included. If the reflective call turns out to be blocked, the app shows the exact exception.
 
+## Knowing it worked without opening the app
+
+After each boot (once you've unlocked the phone), ProcLimit:
+
+- shows a toast: *ProcLimit: At most 4 processes*
+- posts a silent notification that stays in the shade until you dismiss it: *At most 4 background processes · Limit applied at boot · <time>*
+- if the apply failed, posts an alerting notification with the error instead
+
+The notifications need the notification permission: tap **Allow notifications** in the app once. Each kind has its own channel ("Applied at boot", "Problems"), so you can silence the success one in system settings and keep failure alerts.
+
 ## Download
 
 Grab `proclimit-vX.Y.apk` from [Releases](https://github.com/0mega28/proclimit/releases). Each release is built and signed by GitHub Actions from the tagged commit, and the release notes list the APK and signing-certificate SHA-256. To check that an APK really came from this repo's workflow:
@@ -46,7 +56,7 @@ Run these from the Mac. From Termux, drop the `adb shell` prefix from the `pm`/`
    ```bash
    adb install -r app/build/outputs/apk/debug/app-debug.apk
    ```
-2. **Launch once.** Open ProcLimit from the launcher. This takes the app out of the "stopped" state; without it, Android won't deliver `BOOT_COMPLETED`. The screen should show *Permission … NOT granted*.
+2. **Launch once.** Open ProcLimit from the launcher. This takes the app out of the "stopped" state; without it, Android won't deliver `BOOT_COMPLETED`. The screen should show *Permission not granted* with the grant command. Tap **Allow notifications** and allow.
 3. **Grant**
    ```bash
    adb shell pm grant io.github.omega28.proclimit android.permission.SET_PROCESS_LIMIT
@@ -56,8 +66,8 @@ Run these from the Mac. From Termux, drop the `adb shell` prefix from the `pm`/`
    adb shell dumpsys package io.github.omega28.proclimit | grep SET_PROCESS_LIMIT
    ```
    Pass: a line with `android.permission.SET_PROCESS_LIMIT: granted=true`.
-5. **Apply.** Go back to the app; it should now show *GRANTED*. Tap **Apply 4 now**.
-   Pass: *Last button result: OK: set At most 4 (4), now At most 4 (4)*, and Developer options → Background process limit shows "At most 4 processes".
+5. **Apply.** Switch away from the app and back (it refreshes on resume); it should now show *Permission granted*. Tap **Apply 4 now**.
+   Pass: the snackbar says *Set to at most 4 processes*, the top card shows *At most 4 processes · Active now*, and Developer options → Background process limit shows "At most 4 processes".
    Fail (assumption 2): a `SecurityException`, `NoSuchMethodException`, or hidden-API error. Note the exact text.
 6. **Reboot**
    ```bash
@@ -72,7 +82,7 @@ Run these from the Mac. From Termux, drop the `adb shell` prefix from the `pm`/`
    ```bash
    adb logcat -d -s ProcLimit
    ```
-   Pass: `boot: OK: set At most 4 (4), now At most 4 (4)`. The app's *Last boot apply* line should show the same result with the boot time.
+   Pass: `boot: OK: Set to at most 4 processes`. You should also have seen the toast after unlocking, the notification shade should show *At most 4 background processes*, and the app's *Last boot* card shows the same result with the boot time.
 9. **Confirm in Developer options** (assumption 3): Settings → System → Developer options → Background process limit shows **"At most 4 processes"**. Check again a few minutes later to make sure nothing reset it.
 
 The protocol passes when steps 4, 5, 7, 8 and 9 all pass.

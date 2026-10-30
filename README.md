@@ -2,6 +2,22 @@
 
 A personal (sideloaded) Android app that sets **Developer options → Apps → Background process limit** to **"At most 4 processes"** at every boot.
 
+## Why this exists
+
+Since the Android 17 QPR1 update (September 15, 2026), many Pixels, from the Pixel 6 to the 10a, lag, stutter and freeze under memory pressure, and some apps crash. Users report zRAM filling up while cached apps aren't cleared, with 8 GB phones hit hardest ([Insider Paper](https://insiderpaper.com/pixel-10a-and-9-lag-issues-android-17-qpr1-update/), [Android Authority](https://www.androidauthority.com/android-17-qpr1-pixel-performance-regression-3718939/)). Reports on Reddit:
+
+- [Lags on Google Pixel 8](https://www.reddit.com/r/GooglePixel/comments/1wvnj9c/lags_on_google_pixel_8/)
+- [Pixel 8 slowed down](https://www.reddit.com/r/GooglePixel/comments/1wtxm0m/pixel_8_slowed_down/)
+- [New update is really slowing my 9a down](https://www.reddit.com/r/GooglePixel/comments/1wt0od2/new_update_is_really_slowing_my_9a_down_anyone/)
+- [Is there any chance Google will address…](https://www.reddit.com/r/GooglePixel/comments/1wu9j93/is_there_any_chance_google_will_address/)
+- [Pixel 10 Pro animation and unlock stutter](https://www.reddit.com/r/GooglePixel/comments/1x3vyho/comment/pgglmwq/)
+
+**The workaround** (credit to the Redditors who shared it, [here](https://www.reddit.com/r/Pixel8phones/comments/1wrd3an/comment/pdpan9h/) and [here](https://www.reddit.com/r/GooglePixel/comments/1wr1767/comment/pd2l9vb/)): set Developer options → Apps → Background process limit to "At most 4 processes". It keeps memory pressure down, but Android resets it to Standard on every reboot. ProcLimit sets it again for you at each boot.
+
+**The real fix** is in the OS. [GrapheneOS traced the regression](https://www.androidauthority.com/android-17-qpr1-pixel-performance-regression-3718939/) to Google-supplied Pixel components and patched it in its own releases ([discussion](https://news.ycombinator.com/item?id=49937718)); stock Pixels are waiting on Google. As GrapheneOS points out, the process limit has a usability cost: apps you switch back to restart more often. Treat ProcLimit as a stopgap: once your Pixel gets the fix, tap **Reset to Standard** and uninstall it.
+
+## How it works
+
 Android keeps this value only in `ActivityManagerService` memory and forgets it on reboot. ProcLimit sets it again at boot by calling the hidden `IActivityManager.setProcessLimit(4)` through plain reflection on `ActivityManager.getService()`. The call is authorized by `android.permission.SET_PROCESS_LIMIT` (protection level `signature|privileged|development`), which the manifest declares and you grant once with `adb shell pm grant`.
 
 The receiver is direct-boot aware and acts on `LOCKED_BOOT_COMPLETED`, which arrives right after boot, before you unlock. `BOOT_COMPLETED` alone isn't enough: Android delivers it to every listening app in turn, and on a real phone (358 receivers on a Pixel 8) it reached ProcLimit more than 3 minutes after boot. `BOOT_COMPLETED` is still handled as a backup and re-applies the limit.
@@ -12,12 +28,11 @@ The receiver is direct-boot aware and acts on `LOCKED_BOOT_COMPLETED`, which arr
 
 ## Knowing it worked without opening the app
 
-After each boot (once you've unlocked the phone), ProcLimit:
+After each boot, ProcLimit:
 
-- posts the notification below as soon as the limit is applied (before unlock), so it's waiting when you unlock
-- shows a toast, *ProcLimit: At most 4 processes*, when `BOOT_COMPLETED` arrives after unlock; on a busy phone that can be a few minutes later
-- posts a silent notification that stays in the shade until you dismiss it: *At most 4 background processes · Limit applied at boot · <time>*
+- posts a silent notification as soon as the limit is applied, before unlock, so it's waiting when you unlock: *At most 4 background processes · Limit applied at boot · <time>*. It stays in the shade until you dismiss it.
 - if the apply failed, posts an alerting notification with the error instead
+- shows a toast, *ProcLimit: At most 4 processes*, when `BOOT_COMPLETED` arrives after unlock; on a busy phone that can be a few minutes later
 
 The notifications need the notification permission: tap **Allow notifications** in the app once. Each kind has its own channel ("Applied at boot", "Problems"), so you can silence the success one in system settings and keep failure alerts.
 

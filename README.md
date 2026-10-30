@@ -8,7 +8,27 @@ Android keeps this value only in `ActivityManagerService` memory and forgets it 
 - Limit values: `-1` Standard, `0` no background processes, `1`–`4` at most N
 - No hidden-API workaround is included. If the reflective call turns out to be blocked, the app shows the exact exception.
 
-## Build
+## Download
+
+Grab `proclimit-vX.Y.apk` from [Releases](https://github.com/0mega28/proclimit/releases). Each release is built and signed by GitHub Actions from the tagged commit, and the release notes list the APK and signing-certificate SHA-256. To check that an APK really came from this repo's workflow:
+
+```bash
+gh attestation verify proclimit-v1.0.apk -R 0mega28/proclimit
+```
+
+Releases are signed with a fixed key, so later versions install over earlier ones and keep the permission grant. A locally built debug APK has a different signature: uninstall it first, then grant again after installing the release.
+
+## Releasing
+
+Push a version tag; the `Build` workflow builds the signed APK, attests it and creates the GitHub release:
+
+```bash
+git tag v1.0 && git push origin v1.0
+```
+
+Signing uses four repo secrets: `PROCLIMIT_KEYSTORE_BASE64`, `PROCLIMIT_KEYSTORE_PASSWORD`, `PROCLIMIT_KEY_ALIAS`, `PROCLIMIT_KEY_PASSWORD`. Gradle reads them from the matching `PROCLIMIT_*` environment variables, so release builds without them come out unsigned.
+
+## Build locally
 
 Requires JDK 17 and the Android SDK with `platforms;android-37.0` installed and licenses accepted (the Android Gradle Plugin downloads the build-tools it needs). `local.properties` must contain `sdk.dir=...`; on this Mac that's `/opt/homebrew/share/android-commandlinetools`.
 

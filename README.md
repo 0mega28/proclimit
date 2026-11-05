@@ -114,3 +114,7 @@ The protocol passes when steps 4, 5, 7, 8 and 9 all pass.
 ## Reset
 
 Tap **Reset to Standard** in the app, or uninstall it and reboot. Uninstalling also removes the grant.
+
+## License
+
+[MIT](LICENSE)

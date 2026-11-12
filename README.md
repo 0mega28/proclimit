@@ -1,5 +1,10 @@
 # ProcLimit
 
+> [!IMPORTANT]
+> **This project is archived and no longer maintained.** Google has fixed the Android 17 QPR1 memory/lag regression ([issue 571186734](https://issuetracker.google.com/issues/571186734)). **Update your Pixel to Android 17 QPR2** instead of using this workaround.
+>
+> If ProcLimit is installed: open it, tap **Reset to Standard**, uninstall it, then reboot. Uninstalling also removes the `SET_PROCESS_LIMIT` grant.
+
 A personal (sideloaded) Android app that sets **Developer options → Apps → Background process limit** to **"At most 4 processes"** at every boot.
 
 ## Why this exists
